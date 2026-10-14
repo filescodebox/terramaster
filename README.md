@@ -11,6 +11,7 @@ PigeonBox（文件快递柜，匿名口令分享文本/文件）的 **铁威马 
 - JWT 密钥首启自动生成并持久化到数据目录，重启/升级不丢
 - 开机自启：编排内已置 `restart: unless-stopped`（另请把 Docker 应用设为自动启动）
 - 默认关闭开放注册（NAS 场景，管理员建号）
+- 设备直传：server 镜像自 1.21.0 起随包 p2pc，compose 部署即具设备直传能力；admin「系统配置→P2P」分区热启停联邦与设备直传
 
 > TOS 没有免审的第三方应用通道：应用中心手动安装只收 `.tpk`/`.deb`，TOS 7 官方
 > Docker 应用包（4 文件）走平台送审且**拒收 ghcr 镜像**——为二期路线（见 [tos7/](./tos7/README.md)）；
@@ -67,7 +68,7 @@ TOS 的 `registry-mirrors` 加速只对 docker.io 生效，对 ghcr 无效，可
 
 ## 开发与构建
 
-共享资产（`compose.yml` / `env.example`）的**真相源在生态主仓 [`deploy/nas/`](https://github.com/pigeonbox/pigeonbox/tree/main/deploy/nas)**：改编排/默认值请改 hub 模板后执行 `bash deploy/nas/sync.sh sync`，**勿直接改本仓这两个文件**——CI 有「与 hub 模板对齐」漂移门禁，模板一动未同步的仓全部变红。跟随 server 新镜像版本走发版列车：hub 仓 `scripts/nas-release-train.sh <镜像tag> --push` 一条命令完成四处钉版+打 tag。
+共享资产（`compose.yml` / `env.example`）的**真相源在生态主仓 [`deploy/nas/`](https://github.com/pigeonbox/pigeonbox/tree/main/deploy/nas)**：改编排/默认值请改 hub 模板后执行 `bash deploy/nas/sync.sh sync --all`（单仓 `sync --platform <p> --dir <仓>`），**勿直接改本仓这两个文件**——CI 有「与 hub 模板对齐」漂移门禁，模板一动未同步的仓全部变红。跟随 server 新镜像版本走发布列车 v2：hub `make train-bump TRAIN=x.y.z`（`release/trainctl` 状态机）统一完成镜像钉版刷新与各仓打 tag。
 ```sh
 ./scripts/build-zip.sh 0.1.0     # → dist/pigeonbox-terramaster-0.1.0.zip(发布资产)
 docker compose -f deploy/compose.yml config -q   # 模板校验

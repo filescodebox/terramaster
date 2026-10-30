@@ -1,0 +1,112 @@
+# ============================================================
+# PigeonBox —— TOS 7 官方 Docker 应用包 / docker-compose.yml
+#
+# 依据（地面真相，勿凭印象改）：
+#   · TOS 7 Application Development Guide — Chapter 9 (09_Docker_Development.md)
+#   · 官方模板 TOS 7-template-docker
+#     github.com/terramaster-tos/tos-app-pkg-tools
+#   逐条规则与本文件的对账见 scripts/check_tos7_package.py（CI 强制）。
+#
+# ⚠️ **送审硬前置（当前未就绪）**
+#   TOS 应用商店**只收 Docker Hub 镜像**，拒收 ghcr.io / quay.io / 私有仓库。
+#   下面两处 image 目前仍是生态现行源 ghcr.io ⇒ **送审前必须换成 Docker Hub 引用**
+#   （是否给生态镜像线新增 Docker Hub 发布通道 = 生态层决策，尚未拍板）。
+#   scripts/check_tos7_package.py 把这一条报成「送审前置未就绪」（黄灯），
+#   **不**当成规则违规（红灯）—— 因为镜像源不是本仓能单方面决定的。
+#
+# 规则要点（每条都对应 Chapter 9 §9.3 的编号）：
+#   §9.3-1  Compose Spec 3.8+
+#   §9.3-2  x-app-meta：Web UI 应用必填，附在**文件末尾**
+#   §9.3-3  volumes / ports 序列**内不得有注释行**（平台逐行解析这两块，
+#           遇到 "#" 会提前中断该块 ⇒ 挂载目录的 chown 被静默跳过）
+#   §9.3-4  数据必须挂载：bind mount 用**相对路径** ./data（平台会落到
+#           /Volume<N>/DockerAppData/<appid>/ 下）。
+#           ⛔ **绝不可写 /Volume*/… 通配**——平台不展开 "*"，会真的建出
+#           一个名为 /Volume* 的目录，数据就写到那儿去了，卸载时也不在
+#           应用数据根里（官方原文：§9.6.4「You do not write it」）
+#   §9.3-5  host 端口禁用清单 22/80/443/445/3306/5050/5432/6379/8181/8443，
+#           推荐区间 8000-19999 ⇒ 本包取 12345
+#   §9.3-6  禁 privileged；非 root 用 user: 钉 UID:GID
+#   §9.3-8  禁 network_mode: host（用端口映射代替）
+#   §9.3-9  restart: unless-stopped
+#   §9.3-10 每个服务都要有 healthcheck；多容器用 depends_on + service_healthy
+#
+# 两个服务的 user: 取值**来自各自镜像自己的 Dockerfile**（不是猜的）：
+#   · server   镜像 USER app，adduser -u 1000 ⇒ 1000:1000
+#   · frontend 镜像基于 nginxinc/nginx-unprivileged（uid/gid=101 非 root）⇒ 101:101
+#
+# 首启：镜像自带的 /app/docker-entrypoint.sh 已把「JWT 密钥生成并持久化」
+# 与「未设管理员口令 ⇒ 切 /setup 首启向导」下沉到镜像层 ⇒ 本编排**不需要**
+# 自定义 entrypoint，也**不需要**注入管理员口令（TOS 应用包没有 .env 机制）。
+# 安装后浏览器打开 http://<NAS_IP>:12345 走完 /setup 建管理员即可。
+# ============================================================
+
+version: "3.8"
+
+services:
+  pigeonbox:
+    # 👇 Docker Hub 镜像 + 钉死版本号（禁 :latest）。
+    #    送审前把 ghcr.io 换成 Docker Hub 引用（见文件头「送审硬前置」）。
+    image: ghcr.io/pigeonbox/server:4.5.2
+    container_name: pigeonbox-server
+    restart: unless-stopped
+    # 👇 数据持久化：bind mount 相对路径（平台落到应用数据根）。
+    #    ⛔ 序列内不得出现注释行（§9.3-3）
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - PB_SERVER_MODE=release
+      - PB_PRODUCTION=1
+      # 首启走 /setup 向导：镜像入口在 PB_ADMIN_PASSWORD 为空时自动切向导模式，
+      # 这里显式声明一份，避免读者以为「没设口令=弱口令 admin/admin123」。
+      - PB_DISABLE_DEFAULT_ADMIN=true
+      - PB_USER_ALLOW_REGISTRATION=false
+    # 👇 非 root（§9.3-6）：取 server 镜像自己的运行用户（Dockerfile: USER app / uid 1000）
+    user: "1000:1000"
+    # 👇 每个服务都要有 healthcheck（§9.3-10）
+    #    必须显式 GET（/live 未注册 HEAD，wget --spider 发 HEAD 会得 404）
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:12345/live"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  pigeonbox-frontend:
+    image: ghcr.io/pigeonbox/frontend:4.5.2
+    container_name: pigeonbox-frontend
+    restart: unless-stopped
+    # 👇 host 端口 12345（不在禁用清单内，落在推荐区间 8000-19999）
+    #    ⛔ 序列内不得出现注释行（§9.3-3）
+    ports:
+      - "12345:8080"
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - BACKEND_HOST=pigeonbox
+      - BACKEND_PORT=12345
+      # nginx 反代体积上限——物理防线，不是业务上限。业务上限（单文件最大体积）
+      # 在服务端管理台 upload_ex.max_file_size 判定。⚠️ 本值必须 >=
+      # 服务端 upload.max_file_size，否则 nginx 先拒成 413（业务上限形同虚设）。
+      - CLIENT_MAX_BODY_SIZE=8192m
+    # 👇 等后端健康后再起（§9.3-10）
+    depends_on:
+      pigeonbox:
+        condition: service_healthy
+    # 👇 非 root：frontend 镜像基于 nginxinc/nginx-unprivileged（uid/gid=101）
+    user: "101:101"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+# ============================================================
+# x-app-meta —— Web UI 应用必填（§9.3-2），必须附在**文件末尾**。
+# web.port = 上方 ports 里映射的 **host** 端口（12345）
+# ============================================================
+x-app-meta:
+  web:
+    port: 12345
+    protocol: http

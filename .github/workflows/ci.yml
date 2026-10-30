@@ -82,6 +82,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: 组装部署包 zip(CI 版本 0.0.0)
         run: ./scripts/build-zip.sh 0.0.0
+      - name: 组装 TOS 7 官方应用包(4 文件 tar.gz)
+        # 打包前先过合规校验(红灯即停)⇒ 不会产出「明知违规还打出来」的包。
+        # ⚠️ 这不是送审包本身:TOS 商店只收 Docker Hub 镜像,而包内 compose 仍指向
+        #    ghcr.io ⇒ 送审前必须先换镜像源(生态层决策,见 tos7/README.md)。
+        run: ./scripts/build-tos7-package.sh pigeonbox x86_64
+      - name: TOS 7 包结构断言
+        run: |
+          tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -qx config.ini
+          tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -qx pigeonbox.lang
+          tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -qx pigeonbox.svg
+          tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -qx docker-compose.yml
+          test "$(tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -c .)" = "4"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: tos7-package
+          path: dist/pigeonbox-x86_64.tar.gz
+          retention-days: 14
+          if-no-files-found: error
       - name: 结构断言
         run: |
           unzip -l dist/pigeonbox-terramaster-0.0.0.zip | grep -q compose.yml

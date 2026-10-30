@@ -25,6 +25,20 @@ jobs:
           assert cfg['depend'] == ['DockerEngine']
           print('config.ini OK')
           EOF
+      - name: TOS7 应用包合规校验(官方 Chapter 9 规则)
+        # TOS 7 应用商店的校验规则只存在于官方开发指南里(散在章节正文、官方模板
+        # 注释清单、模板 README 三处,且彼此不完全一致)⇒ 靠人记必然漂移。
+        # 本脚本把能定论的规则逐条变成机器判据:红灯=违反平台硬规则(送审必被打回),
+        # 黄灯=送审前置未就绪(镜像源待 Docker Hub 决策,不由本仓单方面决定)。
+        run: python3 scripts/check_tos7_package.py
+      - name: TOS7 校验器判据自测(每条规则都要能判红)
+        # 防止校验器退化成"什么都报绿"——那比没有校验器更危险。
+        # 逐条注入违规(latest/privileged/host 网络/Volume 通配/序列内注释/
+        # 缺 user/缺 healthcheck/x-app-meta 位置/字段漂移/lang 少语言/CRLF/
+        # 禁用端口/具名卷未声明/…)⇒ 断言每次都红且报出对应原因。
+        run: python3 scripts/check_tos7_package_test.py
+      - name: TOS7 compose 语法校验
+        run: docker compose -f tos7/docker-compose.yml config -q
       - name: 共享资产与 hub 模板对齐(漂移门禁)
         # 模板真相源=hub 仓 deploy/nas/。列车 bump PR 窗口:读 hub 同列车分支模板
         # (消灭「物化已新版、模板仍旧版」的合并时序窗,1.20.0 首航实测);脚本与模板

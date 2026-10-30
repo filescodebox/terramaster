@@ -1,0 +1,110 @@
+# ============================================================
+# Multilingual file for the PigeonBox TOS 7 Docker application
+# File name MUST be: <appid>.lang  (here: pigeonbox.lang)
+#
+# ALL 14 languages are REQUIRED by the TOS 7 Application Development
+# Guide (Chapter 9). Per the official template's own guidance,
+# untranslated languages are filled with the English text.
+#
+# Guide: github.com/terramaster-tos/tos-app-pkg-tools
+#   → "TOS 7 Application Development Guide/09_Docker_Development.md"
+#   → "TOS 7-template-docker/myapp-docker.lang"
+# ============================================================
+
+[en-us]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "PigeonBox runs in a Docker container on your NAS: share files with a pickup code, and pick up what others shared with you."
+release_note = "1. Initial release."
+important = "Requires DockerEngine to be installed and enabled from the TOS App Center. Docker images must come from Docker Hub."
+
+[zh-cn]
+name = "PigeonBox 文件快递柜"
+auth = "PigeonBox"
+descript = "PigeonBox 以 Docker 容器运行在你的 NAS 上：生成取件码把文件分享出去，也能凭取件码取回别人分享给你的文件。"
+release_note = "1. 首次发布。"
+important = "需要从 TOS 应用中心安装并启用 DockerEngine。Docker 镜像必须来自 Docker Hub。"
+
+[zh-hk]
+name = "PigeonBox 文件快遞櫃"
+auth = "PigeonBox"
+descript = "PigeonBox 以 Docker 容器運行在你的 NAS 上：產生取件碼把檔案分享出去，也能憑取件碼取回別人分享給你的檔案。"
+release_note = "1. 首次發佈。"
+important = "需要從 TOS 應用中心安裝並啟用 DockerEngine。Docker 鏡像必須來自 Docker Hub。"
+
+[fr-fr]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "PigeonBox fonctionne dans un conteneur Docker sur votre NAS : partagez des fichiers avec un code de retrait et récupérez ceux que d'autres vous ont partagé."
+release_note = "1. Version initiale."
+important = "Nécessite l'installation et l'activation de DockerEngine depuis l'App Center TOS. Docker images must come from Docker Hub."
+
+[de-de]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "PigeonBox läuft in einem Docker-Container auf deinem NAS: Teile Dateien mit einem Abholcode und hole ab, was andere dir geteilt haben."
+release_note = "1. Erstveröffentlichung."
+important = "Erfordert die Installation und Aktivierung von DockerEngine über das TOS App Center. Docker images must come from Docker Hub."
+
+[it-it]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "PigeonBox gira in un container Docker sul tuo NAS: condividi file con un codice di ritiro e recupera quelli che altri hanno condiviso con te."
+release_note = "1. Versione iniziale."
+important = "Richiede l'installazione e l'attivazione di DockerEngine dal TOS App Center. Docker images must come from Docker Hub."
+
+[es-es]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "PigeonBox se ejecuta en un contenedor Docker en tu NAS: comparte archivos con un código de recogida y recupera los que otros te han compartido."
+release_note = "1. Versión inicial."
+important = "Requiere la instalación y la activación de DockerEngine desde el App Center de TOS. Docker images must come from Docker Hub."
+
+[hu-hu]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "A PigeonBox Docker-tárolóban fut a NAS-on: ossz meg fájlokat egy átvételi kóddal, és vedd át, amit mások megosztottak veled."
+release_note = "1. Első kiadás."
+important = "A TOS App Centerből telepíteni és engedélyezni kell a DockerEngine-et. Docker images must come from Docker Hub."
+
+[ja-jp]
+name = "PigeonBox ファイルロッカー"
+auth = "PigeonBox"
+descript = "PigeonBox は NAS 上の Docker コンテナで動作します。受け取りコードでファイルを共有し、他人から共有されたファイルを受け取れます。"
+release_note = "1. 初回リリース。"
+important = "TOS アプリセンターから DockerEngine をインストールして有効にする必要があります。Docker images must come from Docker Hub."
+
+[ko-kr]
+name = "PigeonBox 파일 보관함"
+auth = "PigeonBox"
+descript = "PigeonBox는 NAS의 Docker 컨테이너에서 실행됩니다. 수령 코드로 파일을 공유하고, 다른 사람이 공유한 파일을 받아갈 수 있습니다."
+release_note = "1. 최초 출시."
+important = "TOS 앱 센터에서 DockerEngine을 설치하고 활성화해야 합니다. Docker images must come from Docker Hub."
+
+[pl-pl]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "PigeonBox działa w kontenerze Docker na twoim NAS-ie: udostępniaj pliki kodem odbioru i odbieraj te, które udostępnili ci inni."
+release_note = "1. Wersja początkowa."
+important = "Wymaga instalacji i włączenia DockerEngine w TOS App Center. Docker images must come from Docker Hub."
+
+[ru-ru]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "PigeonBox работает в контейнере Docker на вашем NAS: делитесь файлами по коду получения и забирайте файлы, которыми поделились с вами другие."
+release_note = "1. Первоначальный выпуск."
+important = "Требуется установить и включить DockerEngine в TOS App Center. Docker images must come from Docker Hub."
+
+[tr-tr]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "PigeonBox, NAS'ınızda bir Docker konteyneri içinde çalışır: bir teslim koduyla dosya paylaşın, başkalarının paylaştığı dosyaları teslim alın."
+release_note = "1. İlk sürüm."
+important = "TOS Uygulama Merkezi'nden DockerEngine kurulmalı ve etkinleştirilmelidir. Docker images must come from Docker Hub."
+
+[pt-pt]
+name = "PigeonBox File Locker"
+auth = "PigeonBox"
+descript = "O PigeonBox corre num contentor Docker no seu NAS: partilhe ficheiros com um código de levantamento e receba os que outros lhe partilharam."
+release_note = "1. Versão inicial."
+important = "Requer a instalação e activação do DockerEngine no App Center do TOS. Docker images must come from Docker Hub."

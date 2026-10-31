@@ -19,8 +19,11 @@ CI 强制：包漂了当场红，不等到送审被平台打回。
 
 - **红灯（规则违规）**：违反 TOS 平台的硬规则 ⇒ 送审必被打回 ⇒ 退出码非 0。
 - **黄灯（送审前置未就绪）**：不是本仓能单方面决定的 ⇒ 只提示，不阻断。
-  当前两条：黄灯-1 镜像源不是 Docker Hub（生态层决策待拍板）；
-            黄灯-2 compose 里的镜像 tag 与本仓 VERSION 不一致（须随列车手工同步）。
+  当前一条：黄灯 compose 里的镜像 tag 与本仓 VERSION 不一致（须随列车手工同步）。
+
+2026-10-31：原「黄灯-1 镜像源不是 Docker Hub」已**升级为红灯**——
+  生态镜像线新增 Docker Hub 发布通道后，「镜像源不是本仓能单方面决定的」
+  这个前提不成立 ⇒ 它是平台必拒的规则违规 ⇒ 留在黄灯等于门禁永远不响。
 
 # 零依赖
 
@@ -74,6 +77,18 @@ def warn(msg: str) -> None:
 def read(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
+
+
+def find_line(text: str, needle: str) -> int:
+    """返回 needle 首次出现的行号（1 起）；找不到返回 0。
+
+    为什么要有：错误消息要指到**具体行**（平台逐行解析 compose，
+    「第 47 行」比「某处」有用得多）。
+    """
+    for i, line in enumerate(text.splitlines(), 1):
+        if needle in line:
+            return i
+    return 0
 
 
 # ── 1. 打包清单：恰好 4 个文件 ───────────────────────────────────────────────
@@ -359,14 +374,21 @@ def check_compose(appid: str, cfg: dict) -> None:
                 fail(f"compose 第 {ln} 行：具名卷 {src!r} 未在顶层 volumes: 声明"
                      f"（否则 Compose 直接拒整个项目，应用中心装不上）")
 
-    # ── 黄灯：镜像源必须是 Docker Hub（送审硬前置，生态层决策待拍板）────────
+    # ── 红灯：镜像源必须是 Docker Hub（送审硬前置，平台必拒）────────────
+    # 2026-10-31：这一条从**黄灯**升级为**红灯**。
+    #   理由：① 生态镜像线已新增 Docker Hub 发布通道（pigeonbox/server 仓
+    #   release 流水线一次构建双推 ghcr + Docker Hub）⇒ 「镜像源不是本仓能
+    #   单方面决定的」这个前提**已不成立**；② TOS 商店拒收非 Docker Hub
+    #   镜像 ⇒ 这是**平台必拒**的规则违规，与其他红灯同级。
+    #   ⇒ 留着黄灯 = 门禁永远不响 ⇒ 等于没有门禁。
     images = re.findall(r"^\s*image\s*:\s*(\S+)", text, re.M)
     for img in images:
         if not (img.startswith("docker.io/") or "/" in img and
                 img.split("/", 1)[0] in ("docker.io", "index.docker.io")):
-            warn(f"镜像 {img} 不是 Docker Hub 引用（TOS 应用商店拒收 ghcr.io / "
-                 f"quay.io / 私有仓库 ⇒ 送审前必须换成 Docker Hub；"
-                 f"是否新增 Docker Hub 发布通道 = 生态层决策，待拍板）")
+            fail(f"compose 第 {find_line(text, img)} 行：镜像 {img} 不是 Docker Hub 引用"
+                 f"（TOS 应用商店拒收 ghcr.io / quay.io / 私有仓库 ⇒ 送审必被打回）"
+                 f"；生态镜像线已双推 Docker Hub ⇒ 请把 image 换成 "
+                 f"docker.io/<namespace>/<name>:<version>")
 
     # ── 黄灯：镜像 tag 与本仓 VERSION 对齐（版本漂移）────────────────────────
     ver_file = os.path.join(REPO, "VERSION")

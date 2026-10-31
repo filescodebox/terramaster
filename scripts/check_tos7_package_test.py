@@ -172,6 +172,26 @@ def m_config_not_json(pkg: str) -> None:
     write(f, "{ this is not json\n")
 
 
+def m_ghcr_image(pkg: str) -> None:
+    """镜像源换成 ghcr.io（TOS 商店拒收 ⇒ 送审必被打回）。
+
+    2026-10-31：这条规则从**黄灯**升级为**红灯**（生态镜像线已双推 Docker Hub）
+    ⇒ 必须钉住它**能判红**且报红（否则升级只是把一条永不触发的黄灯换成红灯）。
+    """
+    f = os.path.join(pkg, "docker-compose.yml")
+    s = read(f)
+    s = s.replace("image: docker.io/pigeonbox/server:", "image: ghcr.io/pigeonbox/server:")
+    write(f, s)
+
+
+def m_quay_image(pkg: str) -> None:
+    """镜像源换成 quay.io（另一种被拒的 registry）。"""
+    f = os.path.join(pkg, "docker-compose.yml")
+    s = read(f)
+    s = s.replace("image: docker.io/pigeonbox/frontend:", "image: quay.io/pigeonbox/frontend:")
+    write(f, s)
+
+
 CASES = [
     ("镜像用 :latest", m_latest, "latest"),
     ("privileged: true", m_privileged, "privileged"),
@@ -194,6 +214,8 @@ CASES = [
     ("缺 docker-compose.yml", m_missing_compose, "docker-compose.yml 不存在"),
     ("包里多出文件", m_extra_file, "多余文件"),
     ("svg 不是 svg", m_bad_svg, "不是 SVG"),
+    ("镜像源是 ghcr.io（TOS 拒收）", m_ghcr_image, "Docker Hub"),
+    ("镜像源是 quay.io（TOS 拒收）", m_quay_image, "Docker Hub"),
 ]
 
 

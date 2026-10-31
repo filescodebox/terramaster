@@ -7,12 +7,14 @@
 #     github.com/terramaster-tos/tos-app-pkg-tools
 #   逐条规则与本文件的对账见 scripts/check_tos7_package.py（CI 强制）。
 #
-# ⚠️ **送审硬前置（当前未就绪）**
+# ⚠️ **送审硬前置（Docker Hub 发布通道已上，镜像源已切换）**
 #   TOS 应用商店**只收 Docker Hub 镜像**，拒收 ghcr.io / quay.io / 私有仓库。
-#   下面两处 image 目前仍是生态现行源 ghcr.io ⇒ **送审前必须换成 Docker Hub 引用**
-#   （是否给生态镜像线新增 Docker Hub 发布通道 = 生态层决策，尚未拍板）。
-#   scripts/check_tos7_package.py 把这一条报成「送审前置未就绪」（黄灯），
-#   **不**当成规则违规（红灯）—— 因为镜像源不是本仓能单方面决定的。
+#   生态镜像线已新增 Docker Hub 发布通道（pigeonbox/server 仓 release 流水线
+#   一次构建双推 ghcr + Docker Hub）⇒ 本包的 image 已切到 Docker Hub 引用。
+#   ⚠️ Docker Hub 命名空间随账号而定（默认 pigeonbox）；
+#      若账号不同，改这两处 image 的命名空间即可（**不要**改回 ghcr.io）。
+#   scripts/check_tos7_package.py 对「镜像源不是 Docker Hub」报**红灯**
+#   （规则违规：平台必拒）—— 这条现在是硬门禁，不再是「待拍板」的黄灯。
 #
 # 规则要点（每条都对应 Chapter 9 §9.3 的编号）：
 #   §9.3-1  Compose Spec 3.8+
@@ -46,8 +48,8 @@ version: "3.8"
 services:
   pigeonbox:
     # 👇 Docker Hub 镜像 + 钉死版本号（禁 :latest）。
-    #    送审前把 ghcr.io 换成 Docker Hub 引用（见文件头「送审硬前置」）。
-    image: ghcr.io/pigeonbox/server:4.5.2
+    #    TOS 应用商店只收 Docker Hub；生态镜像线已双推 ghcr + Docker Hub。
+    image: docker.io/pigeonbox/server:4.5.2
     container_name: pigeonbox-server
     restart: unless-stopped
     # 👇 数据持久化：bind mount 相对路径（平台落到应用数据根）。
@@ -74,7 +76,7 @@ services:
       retries: 3
 
   pigeonbox-frontend:
-    image: ghcr.io/pigeonbox/frontend:4.5.2
+    image: docker.io/pigeonbox/frontend:4.5.2
     container_name: pigeonbox-frontend
     restart: unless-stopped
     # 👇 host 端口 12345（不在禁用清单内，落在推荐区间 8000-19999）

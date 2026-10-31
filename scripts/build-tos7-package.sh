@@ -76,7 +76,7 @@ PYEOF
 # 改写后自检：暂存副本里的 platform 必须是目标平台（防「改写没生效」）
 got=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["platform"])' "$STAGE/config.ini")
 if [ "$got" != "$PLATFORM" ]; then
-  echo "✗ 暂存 config.ini 的 platform 改写未生效：期望 $PLATFORM，实际 $got" >&2
+  echo "✗ 暂存 config.ini 的 platform 改写未生效：期望 ${PLATFORM}，实际 ${got}" >&2
   exit 1
 fi
 

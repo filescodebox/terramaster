@@ -93,8 +93,8 @@ set it to that image's own UID:GID（guide 10.3.1）」——本包正是这种�
 
 | # | 事项 | 性质 | 现状 |
 |---|---|---|---|
-| 1 | **镜像须同步到 Docker Hub** | **生态层决策，待拍板** | TOS 应用商店**只收 Docker Hub 镜像**，拒收 ghcr.io / quay.io / 私有仓库。本包 `docker-compose.yml` 里两处 image 仍是生态现行源 `ghcr.io` ⇒ **送审前必须换成 Docker Hub 引用**。是否给生态镜像线新增 Docker Hub 发布通道（牵动 server 仓 release 流水线的凭据与 tag 矩阵）= 生态层决策。校验器把这一条报成**黄灯**（送审前置未就绪），不是规则违规。 |
-| 2 | `tos7/` 不在列车的物化清单里 | 流程缺口 | 列车 bump 只物化 `VERSION` / `deploy/compose.yml` / `deploy/env.example`，**不含 `tos7/`** ⇒ 包里钉的镜像 tag 不会随列车自动抬 ⇒ 须**手工同步**。校验器把这一条报成**黄灯**。 |
+| 1 | **Docker Hub 凭据未配** | **生态层资源缺失**（代码侧已无欠账） | TOS 应用商店**只收 Docker Hub 镜像**，拒收 ghcr.io / quay.io / 私有仓库。生态镜像线已于 2026-10-31 **双推 Docker Hub**（`pigeonbox/server` 仓 release 流水线一次构建、多 tag 推送），本包 `docker-compose.yml` 两处 image 已是 `docker.io/pigeonbox/<name>:<tag>`（「镜像源不是 Docker Hub」由校验器判**红灯**——平台必拒的规则违规，不是可忽略的提示）。**但 `pigeonbox/server` 仓当前 0 个 secret** ⇒ Docker Hub 上还没有这些镜像 ⇒ 送审仍卡在凭据。在该仓配 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`（仓库名可用 `vars.DOCKER_HUB_REPO_SERVER` / `DOCKER_HUB_REPO_FRONTEND` 覆盖）后**无需改代码**，下一次 release 自动双推。⚠️ 缺凭据时流水线**只跳 Docker Hub 那一路**（ghcr + Release 照常出）并在 job summary 打 `::warning`「Docker Hub 未发布」⇒ 不静默、也不阻塞整条发版链。 |
+| 2 | ~~`tos7/` 不在列车的物化清单里~~ | ✅ **已闭合** | 列车 bump 的物化清单已含 `tos7/docker-compose.yml`（用 `SetPinnedImageTag` 只改 image 行的版本段、**不碰 registry**，以免被列车 bump 改回 ghcr）⇒ 包里钉的镜像 tag **随列车自动抬**，无须手工同步。校验器里「镜像 tag 与本仓 VERSION 不一致」那条**黄灯**保留为漂移哨兵（正常态恒绿）。 |
 | 3 | 多架构送审 | 平台要求 | `config.ini` 的 `platform` 一次只能填一个（`x86_64` 或 `aarch64`），TOS 要求**一平台一提交** ⇒ 需按架构各打包一次。 |
 | 4 | 真机验证 | 需设备 | TOS 5/6/7 真机装包 → 起服务 → 分享/取件闭环。 |
 | 5 | 送审 | 需账号 | developer.terra-master.com 平台自动校验 + 人工审核。 |

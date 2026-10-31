@@ -84,16 +84,36 @@ jobs:
         run: ./scripts/build-zip.sh 0.0.0
       - name: 组装 TOS 7 官方应用包(4 文件 tar.gz)
         # 打包前先过合规校验(红灯即停)⇒ 不会产出「明知违规还打出来」的包。
-        # ⚠️ 这不是送审包本身:TOS 商店只收 Docker Hub 镜像,而包内 compose 仍指向
-        #    ghcr.io ⇒ 送审前必须先换镜像源(生态层决策,见 tos7/README.md)。
+        # ⚠️ 送审包本体仍受一个外部条件约束：TOS 商店只收 Docker Hub 镜像，
+        #    而 DOCKERHUB_USERNAME/DOCKERHUB_TOKEN 未配 ⇒ Docker Hub 上还没有
+        #    这些镜像 ⇒ 送审前须先让镜像发布出去（见 tos7/README.md）。
         run: ./scripts/build-tos7-package.sh pigeonbox x86_64
-      - name: TOS 7 包结构断言
+      - name: TOS 7 包结构断言(标准读取器口径)
+        # ⚠️ **不能用 `tar -tzf`**：macOS 的 bsdtar 会**隐藏** AppleDouble `._*`
+        #    条目 ⇒ 用它断言「包内恰好 4 个文件」**恰好瞎在这一点上**。
+        #    2026-10-31 实测：macOS 上打出来的包实际含 8 个条目（4 个 `._*` 垃圾），
+        #    bsdtar 只显示 4 个 ⇒ 脚本自检与 CI 断言**双双放行**，
+        #    而 TOS 只收恰好 4 个文件 ⇒ 送审必被打回。
+        #    ⇒ 断言一律用**标准读取器**（python tarfile）——与平台解包视角一致。
         run: |
-          tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -qx config.ini
-          tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -qx pigeonbox.lang
-          tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -qx pigeonbox.svg
-          tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -qx docker-compose.yml
-          test "$(tar -tzf dist/pigeonbox-x86_64.tar.gz | grep -c .)" = "4"
+          python3 - <<'EOF'
+          import json
+          import tarfile
+          p = "dist/pigeonbox-x86_64.tar.gz"
+          with tarfile.open(p) as t:
+              names = t.getnames()
+          assert len(names) == 4, f"包内应恰好 4 个文件，实际 {len(names)}：{names}"
+          junk = [n for n in names if n.startswith("._") or "/._" in n]
+          assert not junk, f"混入 AppleDouble 垃圾条目：{junk}"
+          with tarfile.open(p) as t:
+              cfg = json.loads(t.extractfile("config.ini").read().decode())
+          assert cfg["platform"] == "x86_64", f"包内 platform={cfg['platform']}"
+          print("✓ 包内恰好 4 个文件、无垃圾条目、platform=x86_64")
+          EOF
+      - name: TOS 7 打包脚本自测(平台必须真写进包里)
+        # 2026-10-31 实测的真缺陷：platform 参数此前只进文件名、不进包内容
+        # ⇒ 打出「名字叫 aarch64、内容是 x86_64」的包 ⇒ 送审必被拒。
+        run: python3 scripts/build_tos7_package_test.py
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: tos7-package

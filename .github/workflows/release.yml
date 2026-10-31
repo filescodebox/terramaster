@@ -1,11 +1,14 @@
 name: Release
-# 打 v* tag → 部署包 zip 发布(TOS 无免审第三方包通道,4 文件 Docker 应用包送审为二期,见 tos7/):
+# 打 v* tag → 部署包 zip 发布(TOS 无免审第三方包通道) + TOS 7 官方 Docker
+# 应用包(4 文件 tar.gz,送审包,见 tos7/):
 #   1. build: 组装 zip
-#   2. release: 挂本仓 Release
-#   3. attach-to-hub: 回挂生态主仓 pigeonbox/pigeonbox(tag terramaster-v*,
+#   2. tos7: 组装 TOS 7 应用包(x86_64 / aarch64 各一份——TOS 一平台一提交)
+#   3. release: 挂本仓 Release(zip + TOS 7 送审包)——**以 tos7 为门禁**
+#   4. attach-to-hub: 回挂生态主仓 pigeonbox/pigeonbox(tag terramaster-v*,
 #      与 fnos-v*/openwrt-v* 同模式);跨仓写用 TERRAMASTER_PAT
 #      断链必须响(2026-10-08 拔除 continue-on-error——静默放行只会让 hub 统一出口缺资产)
 # workflow_dispatch: 传 version(现有 tag 名)对该版本手动重跑打包+双挂
+#      (可用于修复失败的发布)
 on:
   push:
     tags: ["v*"]
@@ -53,11 +56,44 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-  release:
-    if: github.event_name == 'push'
+  # ── TOS 7 官方 Docker 应用包（送审包）────────────────────────────────
+  # **两个平台各打一份**：TOS 要求一平台一提交（config.ini 的 platform 一次
+  # 只能填一个）⇒ 送审时要交两份，字节必须可复核 ⇒ 落到 Release + 校验和。
+  # ⚠️ 此前 CI **从不出这个包**（只有 CI 流水线里的临时 artifact）⇒ 送审
+  #    只能靠本地手打，且本地 macOS 打出来的包还混着 AppleDouble `._*`
+  #    垃圾条目（bsdtar 建包时塞进去、且 `tar -tzf` **恰好看不见**）⇒
+  #    TOS 只收恰好 4 个文件 ⇒ 送审必被打回。
+  tos7:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.version || github.ref_name }}
+      - name: 组装 TOS 7 应用包(x86_64 / aarch64 各一份)
+        run: |
+          ./scripts/build-tos7-package.sh pigeonbox x86_64
+          ./scripts/build-tos7-package.sh pigeonbox aarch64
+      - name: 校验和
+        run: |
+          cd dist
+          sha256sum pigeonbox-x86_64.tar.gz pigeonbox-aarch64.tar.gz > SHA256SUMS-TOS7
+          cat SHA256SUMS-TOS7
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: tos7-kit
+          path: |
+            dist/pigeonbox-x86_64.tar.gz
+            dist/pigeonbox-aarch64.tar.gz
+            dist/SHA256SUMS-TOS7
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    needs: [build, tos7]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
     steps:
@@ -65,19 +101,30 @@ jobs:
         with:
           name: deploy-kit
           path: rel
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: tos7-kit
+          path: rel-tos7
       - name: 挂本仓 Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VER: ${{ github.ref_name }}
+          # ⚠️ 用 `inputs.version || github.ref_name`（不是裸 ref_name）：
+          #    dispatch 时 ref_name 是**分支名**而不是 tag 名 ⇒ 裸用会挂错版本。
+          VER: ${{ inputs.version || github.ref_name }}
         run: |
           gh release view "${VER}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 || \
             gh release create "${VER}" --repo "${GITHUB_REPOSITORY}" \
               --title "PigeonBox TerraMaster TOS ${VER}" \
-              --notes "铁威马 TOS 5/6/7 部署包(compose 项目导入,见 Assets)。解压后按《安装指引.md》操作:应用中心装 Docker → Docker Manager → 项目 → 添加 → 上传 compose → 验证 → 应用。TOS 7 官方应用包(4 文件)送审为二期(见 tos7/)。"
+              --notes "铁威马 TOS 5/6/7 部署包(compose 项目导入,见 Assets)。解压后按《安装指引.md》操作:应用中心装 Docker → Docker Manager → 项目 → 添加 → 上传 compose → 验证 → 应用。**TOS 7 官方 Docker 应用包**(4 文件 tar.gz,送审包)见 Assets 中的 pigeonbox-x86_64.tar.gz / pigeonbox-aarch64.tar.gz 与 SHA256SUMS-TOS7(TOS 一平台一提交,两份各交一份)。"
           gh release upload "${VER}" rel/*.zip --repo "${GITHUB_REPOSITORY}" --clobber
+          # 送审包也要落到 Release 上——只放 CI artifact(保留 14 天)等于
+          # **没发布**：送审时拿不到可复核的字节。
+          gh release upload "${VER}" rel-tos7/pigeonbox-x86_64.tar.gz \
+            rel-tos7/pigeonbox-aarch64.tar.gz rel-tos7/SHA256SUMS-TOS7 \
+            --repo "${GITHUB_REPOSITORY}" --clobber
 
   attach-to-hub:
-    needs: build
+    needs: [build, tos7]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

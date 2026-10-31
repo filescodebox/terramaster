@@ -54,6 +54,6 @@ if [ "$count" != "4" ]; then
 fi
 
 # ⚠️ 变量紧跟中文标点时必须写 ${VAR}：非 UTF-8 locale 下 bash 会把多字节字符的
-#    首字节算进变量名（$OUT（ ⇒ 报 "OUT?: unbound variable"）。
+#    首字节算进变量名（${OUT}（ ⇒ 报 "OUT?: unbound variable"）。
 echo "✓ 已产出 ${OUT}（${count} 个文件，platform=${PLATFORM}）"
 tar -tzf "$OUT"

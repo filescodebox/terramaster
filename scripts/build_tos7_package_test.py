@@ -66,6 +66,24 @@ def main() -> int:
             failures.append(f"{platform}: 打包失败 exit={code}\n{out}")
             print(f"  ✗ {platform}: 打包失败 exit={code}\n{out}")
             continue
+        # ⚠️ **不能只看退出码**（2026-10-31 实测的盲区）：
+        #    macOS 的 /bin/sh 在 `set -u` 下遇到未定义变量、或在语法错误时，
+        #    **打印错误却仍以 0 退出** ⇒ 只判 exit code 的自测会把
+        #    「脚本报了错」当成「脚本跑通了」⇒ 本地假绿、CI 才红。
+        #    ⇒ ① 正向断言：成功必须打出成功标记（黑名单会漏词，见下）；
+        #      ② 反向断言：输出里不得有错误痕迹。
+        bad = [m for m in ("unbound variable", "parameter not set", "syntax error",
+                           "Traceback", "✗", "Error")
+               if m in out]
+        if bad:
+            failures.append(f"{platform}: 退出码是 0 但输出里有错误痕迹 {bad}：\n{out}")
+            print(f"  ✗ {platform}: 退出码 0 但输出有错误痕迹 {bad}")
+            continue
+        if "✓ 已产出" not in out:
+            failures.append(f"{platform}: 输出里没有成功标记「✓ 已产出」"
+                            f"（脚本报错却 exit 0 ⇒ 只判退出码会假绿）：\n{out}")
+            print(f"  ✗ {platform}: 输出里没有成功标记「✓ 已产出」")
+            continue
         if not tar_path.exists():
             failures.append(f"{platform}: 产物不存在 {tar_path}")
             print(f"  ✗ {platform}: 产物不存在")

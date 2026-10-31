@@ -53,7 +53,8 @@ done
 # ③ 暂存 4 个文件，并把 platform / version 写进**暂存副本**的 config.ini
 #    （config.ini 虽是 .ini 后缀，内容其实是 JSON ⇒ 用 python 改写，零依赖）
 STAGE="$(mktemp -d)"
-trap 'rm -rf "$STAGE"' EXIT
+OK=0
+trap 'rc=$?; rm -rf "$STAGE"; if [ "$rc" -ne 0 ]; then exit $rc; fi; if [ "$OK" != 1 ]; then exit 1; fi; exit 0' EXIT
 cp "$PKG_DIR/config.ini" "$STAGE/config.ini"
 cp "$PKG_DIR/${APPID}.lang" "$STAGE/"
 cp "$PKG_DIR/${APPID}.svg" "$STAGE/"
@@ -96,7 +97,11 @@ COPYFILE_DISABLE=1 tar -czf "$OUT" -C "$STAGE" \
   config.ini "${APPID}.lang" "${APPID}.svg" docker-compose.yml
 
 # ④ 断言包内条目数 == 4 且无 AppleDouble 垃圾（用标准读取器看，不是 bsdtar）
-python3 - "$OUT" <<'PYEOF'
+#    断言与计数合并成一步：stdout 只吐条目数，错误信息走 stderr，
+#    退出码非 0 ⇒ `set -e` 下脚本立刻中止（**不能只报错还 exit 0**——
+#    2026-10-31 实测：末尾 echo 引用未定义变量时，macOS 的 /bin/sh 打印
+#    "unbound variable" 却**仍以 0 退出** ⇒ 本地 `&&` 链假绿、CI 才红）。
+count=$(python3 - "$OUT" <<'PYEOF'
 import sys
 import tarfile
 
@@ -110,9 +115,12 @@ if len(names) != 4:
 if junk:
     print(f"✗ 包内混入 macOS AppleDouble 垃圾条目：{junk}", file=sys.stderr)
     sys.exit(1)
+print(len(names))
 PYEOF
+)
 
 # ⚠️ 变量紧跟中文标点时必须写 ${VAR}：非 UTF-8 locale 下 bash 会把多字节字符的
 #    首字节算进变量名（${OUT}（ ⇒ 报 "OUT?: unbound variable"）。
 echo "✓ 已产出 ${OUT}（${count} 个文件，platform=${PLATFORM}，version=${PRODUCT_VER}）"
 tar -tzf "$OUT"
+OK=1

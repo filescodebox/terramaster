@@ -52,8 +52,20 @@ def write(p: str, s: str) -> None:
 
 # ── 变异用例：(名称, 改包内哪个文件的哪个函数, 期望在校验输出里出现的关键词) ──
 def m_latest(pkg: str) -> None:
+    """把镜像 tag 改成 :latest。
+
+    ⚠️ **不能写死版本号**（如 `:4.5.2`）：compose 的版本随列车 bump 变
+    （4.5.2 → 4.6.3 → 4.6.4…）⇒ 写死的判据在版本一变就**静默失效**
+    （变异没造成任何改变 ⇒ 判据「测不出」⇒ 门禁变摆设）。
+    2026-10-31 实测：train/4.6.4 分支上这条判据失效（lint 红）。
+    ⇒ 用**正则**匹配任意版本号。
+    """
     f = os.path.join(pkg, "docker-compose.yml")
-    write(f, read(f).replace(":4.5.2", ":latest", 1))
+    s = read(f)
+    s2 = re.sub(r"(image:\s*\S+):v?\d+\.\d+\.\d+", r"\1:latest", s, count=1)
+    if s2 == s:
+        raise AssertionError("m_latest 变异未生效：compose 里没匹配到版本号")
+    write(f, s2)
 
 
 def m_privileged(pkg: str) -> None:
@@ -180,16 +192,22 @@ def m_ghcr_image(pkg: str) -> None:
     """
     f = os.path.join(pkg, "docker-compose.yml")
     s = read(f)
-    s = s.replace("image: docker.io/pigeonbox/server:", "image: ghcr.io/pigeonbox/server:")
-    write(f, s)
+    s2 = s.replace("image: docker.io/pigeonbox/server:",
+                    "image: ghcr.io/pigeonbox/server:")
+    if s2 == s:
+        raise AssertionError("m_ghcr_image 变异未生效：compose 里没匹配到 docker.io 引用")
+    write(f, s2)
 
 
 def m_quay_image(pkg: str) -> None:
     """镜像源换成 quay.io（另一种被拒的 registry）。"""
     f = os.path.join(pkg, "docker-compose.yml")
     s = read(f)
-    s = s.replace("image: docker.io/pigeonbox/frontend:", "image: quay.io/pigeonbox/frontend:")
-    write(f, s)
+    s2 = s.replace("image: docker.io/pigeonbox/frontend:",
+                    "image: quay.io/pigeonbox/frontend:")
+    if s2 == s:
+        raise AssertionError("m_quay_image 变异未生效：compose 里没匹配到 docker.io 引用")
+    write(f, s2)
 
 
 CASES = [

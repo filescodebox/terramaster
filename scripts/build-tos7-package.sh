@@ -13,9 +13,13 @@
 #   appid    默认 pigeonbox（须与 tos7/config.ini 的 id 一致）
 #   platform 默认 x86_64（TOS 要求一平台一提交：x86_64 / aarch64 各打一次）
 #
-# ⚠️ 产物是**送审包**的前提，不是送审包本身：TOS 应用商店只收 Docker Hub 镜像，
-#    而 tos7/docker-compose.yml 里的 image 目前仍是 ghcr.io ⇒ 送审前必须先换成
-#    Docker Hub 引用（生态层决策待拍板，见 tos7/README.md「还没就绪的」）。
+# ⚠️ 产物是**送审包**的前提，不是送审包本身：TOS 应用商店只收 Docker Hub 镜像。
+#    2026-10-31 起 tos7/docker-compose.yml 里已是 docker.io/pigeonbox/<name>:<tag>
+#    （镜像源非 Docker Hub 由校验器判**红灯**——平台必拒的规则违规），
+#    生态镜像线也已双推 Docker Hub（pigeonbox/server release 流水线）。
+#    ⇒ 剩下的真前置是「Docker Hub 上确实有该 tag 的镜像」：
+#      未配 DOCKERHUB_USERNAME / DOCKERHUB_TOKEN 时流水线只推 ghcr 并打
+#      ::warning「Docker Hub 未发布」⇒ 此时打包出来的包**送审会被平台拒**。
 
 set -eu
 

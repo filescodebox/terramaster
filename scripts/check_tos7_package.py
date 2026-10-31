@@ -19,7 +19,9 @@ CI 强制：包漂了当场红，不等到送审被平台打回。
 
 - **红灯（规则违规）**：违反 TOS 平台的硬规则 ⇒ 送审必被打回 ⇒ 退出码非 0。
 - **黄灯（送审前置未就绪）**：不是本仓能单方面决定的 ⇒ 只提示，不阻断。
-  当前一条：黄灯 compose 里的镜像 tag 与本仓 VERSION 不一致（须随列车手工同步）。
+  当前一条：黄灯 compose 里的镜像 tag 与本仓 VERSION 不一致。
+  ⇒ 该条现为**漂移哨兵**：`tos7/docker-compose.yml` 已进列车 bump 的物化清单
+  （`SetPinnedImageTag`），正常态恒绿；黄 ⇒ 说明物化被绕过或版本被手工改过。
 
 2026-10-31：原「黄灯-1 镜像源不是 Docker Hub」已**升级为红灯**——
   生态镜像线新增 Docker Hub 发布通道后，「镜像源不是本仓能单方面决定的」
@@ -398,7 +400,8 @@ def check_compose(appid: str, cfg: dict) -> None:
             m3 = re.search(r":([^:/]+)$", img)
             if m3 and m3.group(1) not in ("latest",) and m3.group(1) != repo_ver:
                 warn(f"镜像 {img} 钉的版本与本仓 VERSION（{repo_ver}）不一致"
-                     f"（tos7/ 不在列车的物化清单里 ⇒ 须手工同步）")
+                     f"（tos7/docker-compose.yml 已在列车 bump 的物化清单里 ⇒ "
+                     f"正常应自动同步；此黄灯说明物化被绕过或版本被手工改过）")
 
 
 def main() -> int:

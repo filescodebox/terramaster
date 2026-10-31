@@ -49,7 +49,7 @@ services:
   pigeonbox:
     # 👇 Docker Hub 镜像 + 钉死版本号（禁 :latest）。
     #    TOS 应用商店只收 Docker Hub；生态镜像线已双推 ghcr + Docker Hub。
-    image: docker.io/pigeonbox/server:4.6.5
+    image: docker.io/pigeonbox/server:4.6.6
     container_name: pigeonbox-server
     restart: unless-stopped
     # 👇 数据持久化：bind mount 相对路径（平台落到应用数据根）。
@@ -76,7 +76,7 @@ services:
       retries: 3
 
   pigeonbox-frontend:
-    image: docker.io/pigeonbox/frontend:4.6.5
+    image: docker.io/pigeonbox/frontend:4.6.6
     container_name: pigeonbox-frontend
     restart: unless-stopped
     # 👇 host 端口 12345（不在禁用清单内，落在推荐区间 8000-19999）

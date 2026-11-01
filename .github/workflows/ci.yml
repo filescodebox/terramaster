@@ -114,7 +114,7 @@ jobs:
         # 2026-10-31 实测的真缺陷：platform 参数此前只进文件名、不进包内容
         # ⇒ 打出「名字叫 aarch64、内容是 x86_64」的包 ⇒ 送审必被拒。
         run: python3 scripts/build_tos7_package_test.py
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: tos7-package
           path: dist/pigeonbox-x86_64.tar.gz
@@ -125,7 +125,7 @@ jobs:
           unzip -l dist/pigeonbox-terramaster-0.0.0.zip | grep -q compose.yml
           unzip -l dist/pigeonbox-terramaster-0.0.0.zip | grep -q env.example
           unzip -l dist/pigeonbox-terramaster-0.0.0.zip | grep -q 安装指引.md
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: deploy-kit
           path: dist/*.zip
